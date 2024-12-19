@@ -1,4 +1,4 @@
-import os,sys,pdb,torch
+import os, sys, pdb, torch
 import logging
 
 now_dir = os.getcwd()
@@ -7,54 +7,58 @@ import sys
 import torch
 
 from multiprocessing import cpu_count
-from rvc.infer.modules.vc.modules import VC
+from rvc.modules.vc.modules import VC
 from rvc.configs.config import Config
 
 from scipy.io import wavfile
 
 
 config = Config()
-    
+
+
 def get_path(name):
-    '''
+    """
     Built to get the path of a file based on where the initial script is being run from.
-    
+
     Args:
         - name(str) : name of the file/folder
-    '''
+    """
     return os.path.join(os.getcwd(), name)
 
+
 def create_directory(name):
-    '''
+    """
     Creates a directory based on the location from which the script is run. Relies on
     get_path()
-    
+
     Args:
         - name(str) : name of the file/folder
-    '''
+    """
     dir_name = get_path(name)
     if not os.path.exists(dir_name):
         os.makedirs(dir_name)
 
-def rvc_convert(model_path,
-            f0_up_key=0,
-            input_path=None, 
-            output_dir_path=None,
-            _is_half="False",
-            f0method="rmvpe",
-            file_index="",
-            file_index2="",
-            index_rate=1,
-            filter_radius=3,
-            resample_sr=48000,
-            rms_mix_rate=0.5,
-            protect=0.33,
-            verbose=False
-          ):  
-    '''
+
+def rvc_convert(
+    model_path,
+    f0_up_key=0,
+    input_path=None,
+    output_dir_path=None,
+    _is_half="False",
+    f0method="rmvpe",
+    file_index="",
+    file_index2="",
+    index_rate=1,
+    filter_radius=3,
+    resample_sr=48000,
+    rms_mix_rate=0.5,
+    protect=0.33,
+    verbose=False,
+):
+    """
     Function to call for the rvc voice conversion.  All parameters are the same present in that of the webui
 
-    Args: 
+    Args:
         model_name (str) : path to the rvc voice model you're using (should be in the rvc weights folder)
         f0_up_key (int) : transpose of the audio file, changes pitch (positive makes voice higher pitch)
         input_path (str) : path to audio file (use wav file)
@@ -72,13 +76,13 @@ def rvc_convert(model_path,
     Returns:
         output_file_path (str) : file path and name of the output wav file
 
-    '''
+    """
     global config, now_dir, hubert_model, tgt_sr, vc, device, is_half
 
     if not verbose:
-        logging.getLogger('fairseq').setLevel(logging.ERROR)
-        logging.getLogger('rvc').setLevel(logging.ERROR)
-    
+        logging.getLogger("fairseq").setLevel(logging.ERROR)
+        logging.getLogger("rvc").setLevel(logging.ERROR)
+
     if torch.cuda.is_available():
         device = "cuda:0"
     elif torch.backends.mps.is_available():
@@ -98,7 +102,7 @@ def rvc_convert(model_path,
         output_dir_path = "output"
         output_file_name = "out.wav"
         output_dir = os.getcwd()
-        output_file_path = os.path.join(output_dir,output_dir_path, output_file_name)
+        output_file_path = os.path.join(output_dir, output_dir_path, output_file_name)
     else:
         # Mainly for Jarod's Vivy project, specify entire path + wav name
         output_file_path = output_dir_path
@@ -107,28 +111,45 @@ def rvc_convert(model_path,
     create_directory(output_dir_path)
     output_dir = get_path(output_dir_path)
 
-    if(is_half.lower() == 'true'):
+    if is_half.lower() == "true":
         is_half = True
     else:
         is_half = False
 
-    config=Config(device,is_half)
-    now_dir=os.getcwd()
+    config = Config(device, is_half)
+    now_dir = os.getcwd()
     sys.path.append(now_dir)
 
-    hubert_model=None
+    hubert_model = None
 
     vc = VC(config)
     vc.get_vc(model_path)
-    _, (tgt_sr, audio_opt) = vc.vc_single(0, input_path, f0_up_key, None, f0method, file_index, file_index2, index_rate, filter_radius, resample_sr, rms_mix_rate, protect)
-    
+    _, (tgt_sr, audio_opt) = vc.vc_single(
+        0,
+        input_path,
+        f0_up_key,
+        None,
+        f0method,
+        file_index,
+        file_index2,
+        index_rate,
+        filter_radius,
+        resample_sr,
+        rms_mix_rate,
+        protect,
+    )
+
     wavfile.write(output_file_path, tgt_sr, audio_opt)
     print(f"\nFile finished writing to: {output_file_path}")
 
     return output_file_path
 
+
 def main():
-    rvc_convert(f0_up_key=6, model_path="rvc_voices/azasu.pth", input_path="delilah.wav")
+    rvc_convert(
+        f0_up_key=6, model_path="rvc_voices/azasu.pth", input_path="delilah.wav"
+    )
+
 
 if __name__ == "__main__":
     main()
